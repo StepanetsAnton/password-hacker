@@ -1,7 +1,7 @@
 import sys
 import socket
 import itertools
-import string
+import os
 
 
 def main():
@@ -12,22 +12,29 @@ def main():
     ip = sys.argv[1]
     port = int(sys.argv[2])
 
-    characters = string.ascii_lowercase + string.digits
+    password_file = "passwords.txt"
+    if not os.path.exists(password_file):
+        print(f"File '{password_file}' not found.")
+        return
 
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((ip, port))
 
-            for length in range(1, len(characters) + 1):
-                for password_tuple in itertools.product(characters, repeat=length):
-                    password = ''.join(password_tuple)
+            with open(password_file, "r") as file:
+                passwords = [line.strip() for line in file]
 
-                    s.sendall(password.encode())
+            for password in passwords:
+
+                variations = map(''.join, itertools.product(*((char.lower(), char.upper()) for char in password)))
+
+                for variant in variations:
+                    s.sendall(variant.encode())
 
                     response = s.recv(1024).decode()
 
                     if response == "Connection success!":
-                        print(password)
+                        print(variant)
                         return
                     elif response == "Too many attempts":
                         print("Too many attempts. Aborting.")
